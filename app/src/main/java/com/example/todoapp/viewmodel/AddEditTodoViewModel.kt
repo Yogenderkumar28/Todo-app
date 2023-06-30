@@ -1,28 +1,29 @@
 package com.example.todoapp.viewmodel
 
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.todoapp.data.Todo
-import com.example.todoapp.data.TodoRepository
+import com.example.todoapp.data.TodoRepositoryImpl
 import com.example.todoapp.util.UiEvent
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.time.LocalDateTime
 import java.util.Date
 import java.util.Locale
 
 class AddEditTodoViewModel(
-    private val repository: TodoRepository,  // this will contain the the implementation of dao
+    private val repositoryImpl: TodoRepositoryImpl,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    var currentDate = formatDate(System.currentTimeMillis())
+    var currentDate = LocalDateTime.now()
 
     var todo by mutableStateOf<Todo?>(null)
         private set
@@ -40,10 +41,10 @@ class AddEditTodoViewModel(
         val todoId = savedStateHandle.get<Int>("todoId")!!
         if(todoId != -1) {
             viewModelScope.launch {
-                repository.getTodoById(todoId)?.let { todo ->
+                repositoryImpl.getTodoById(todoId)?.let { todo ->
                     title = todo.title
                     description = todo.description ?: ""
-                    lastUpdated = currentDate
+                    lastUpdated = currentDate.toString()
                     this@AddEditTodoViewModel.todo = todo
                 }
             }
@@ -60,11 +61,11 @@ class AddEditTodoViewModel(
             }
             is AddEditTodoEvent.OnSaveTodoClick -> {
                 viewModelScope.launch {
-                    repository.insertTodo(
+                    repositoryImpl.insertTodo(
                         Todo(
                             title = title,
                             description =  description,
-                            lastUpdated = currentDate.toLong(),
+//                            lastUpdated = currentDate,
                             id = todo?.id,
                             isDone = todo?.isDone ?: false
 

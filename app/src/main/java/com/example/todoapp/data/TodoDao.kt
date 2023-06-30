@@ -1,10 +1,12 @@
 package com.example.todoapp.data
 
+import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -20,5 +22,6 @@ interface TodoDao {
     suspend fun getTodoById(id: Int): Todo?
 
     @Query("SELECT * FROM todoTable")
-    fun getTodo(): Flow<List<Todo>>
+    fun getTodo(): LiveData<List<Todo>>
+
 }

@@ -1,8 +1,13 @@
 package com.example.todoapp.viewmodel
 
+import android.app.Application
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.todoapp.data.TodoRepository
+import com.example.todoapp.data.Todo
+import com.example.todoapp.data.TodoDatabase
+import com.example.todoapp.data.TodoRepositoryImpl
 import com.example.todoapp.util.Routes
 import com.example.todoapp.util.UiEvent
 import kotlinx.coroutines.channels.Channel
@@ -10,14 +15,15 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 class TodoViewModel(
-    private val repositoryImpl: TodoRepository
+    private val todoRepositoryImpl: TodoRepositoryImpl
 ) : ViewModel() {
 
-    val todos = repositoryImpl.getTodos()
+    val todos: LiveData<List<Todo>> = todoRepositoryImpl.getAllTodo()
 
     private val _uiEvent = Channel<UiEvent>()
     val uiEvent = _uiEvent.receiveAsFlow()
 
+    private var deletedTodo: Todo? = null
 
     fun onEvent(event: TodoListEvent) {
         when(event) {
@@ -33,12 +39,26 @@ class TodoViewModel(
             }
             is TodoListEvent.onDeleteTodoClick -> {
                 viewModelScope.launch {
-                    repositoryImpl.deleteTodo(event.todo)
+                    deletedTodo = event.todo
+                    todoRepositoryImpl.deleteTodo(event.todo)
+                    sendUiEvent(UiEvent.ShowSnackBar(
+                        message = "Todo Deleted",
+                        action = "Undo"
+                    ))
+
                 }
+            }
+            is TodoListEvent.OnUndoTodoClick -> {
+                deletedTodo?.let {todo ->
+                    viewModelScope.launch {
+                        todoRepositoryImpl.insertTodo(todo)
+                    }
+                }
+
             }
             is TodoListEvent.onDoneChange -> {
                 viewModelScope.launch {
-                    repositoryImpl.insertTodo(
+                    todoRepositoryImpl.insertTodo(
                         event.todo.copy(
                             isDone = event.isDone
                         )
@@ -47,5 +67,13 @@ class TodoViewModel(
             }
         }
     }
+
+    private fun sendUiEvent(event: UiEvent) {
+        viewModelScope.launch {
+            _uiEvent.send(event)
+        }
+    }
 }
+
+
 
